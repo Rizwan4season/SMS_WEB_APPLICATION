@@ -125,63 +125,7 @@ function AppContent({ token, setToken, user, setUser }) {
       setLoginError("Please enter all credentials.");
       return;
     }
-
-    // ── PATH A: AHK / WebViewToo Desktop Bridge ─────────────────────────────
-    // When running inside the AHK desktop wrapper, window.chrome.webview exists.
-    // We must NOT use fetch() — the bridge intercepts all API calls.
-    // We post a structured message and wait for AHK_Callback to resolve it.
-    if (typeof window !== "undefined" && window.chrome?.webview) {
-      try {
-        const reqid = "login_" + Date.now();
-        const result = await new Promise((resolve, reject) => {
-          // Temporarily install the global callback receiver
-          const prev = window.AHK_Callback;
-          const timer = setTimeout(() => {
-            window.AHK_Callback = prev;
-            reject(new Error("AHK login request timed out after 15s."));
-          }, 15000);
-
-          window.AHK_Callback = (jsonStr) => {
-            try {
-              const res = JSON.parse(jsonStr);
-              // Only handle our specific reqid — pass others to any prev handler
-              if (res.reqid === reqid) {
-                clearTimeout(timer);
-                window.AHK_Callback = prev;
-                resolve(res);
-              } else if (typeof prev === "function") {
-                prev(jsonStr);
-              }
-            } catch {
-              clearTimeout(timer);
-              window.AHK_Callback = prev;
-              reject(new Error("AHK_Callback received invalid JSON."));
-            }
-          };
-
-          window.chrome.webview.postMessage(JSON.stringify({
-            action: "LOGIN",
-            payload: { username: usernameInput, password: passwordInput },
-            reqid
-          }));
-        });
-
-        if (result.status === "success" && result.token) {
-          localStorage.setItem('erp_token', result.token);
-          localStorage.setItem('erp_user', JSON.stringify(result.user));
-          setToken(result.token);
-          setUser(result.user);
-        } else {
-          setLoginError(result.message || "Invalid username or password.");
-        }
-      } catch (err) {
-        setLoginError(err.message || "Desktop bridge login failed.");
-        console.error("[AHK Bridge] Login error:", err);
-      }
-      return; // ← never fall through to fetch() in desktop mode
-    }
-
-    // ── PATH B: Standard Web / Vercel fetch ─────────────────────────────────
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
@@ -198,8 +142,8 @@ function AppContent({ token, setToken, user, setUser }) {
         setLoginError(res.message || "Invalid username or password.");
       }
     } catch (err) {
-      setLoginError("Failed to connect to server. Please check your connection.");
-      console.error("[Web Login] fetch error:", err);
+      setLoginError("Failed to connect to backend. Verify connection.");
+      console.error(err);
     }
   };
 
