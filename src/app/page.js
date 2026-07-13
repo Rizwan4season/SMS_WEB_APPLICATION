@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Menu, X, LayoutDashboard, GraduationCap, CalendarCheck, 
-  Receipt, BookOpen, Settings, LogOut, RefreshCw, 
+import {
+  Menu, X, LayoutDashboard, GraduationCap, CalendarCheck,
+  Receipt, BookOpen, Settings, LogOut, RefreshCw,
   Coins, Users, Megaphone, Building, FileSpreadsheet, Award,
   Bookmark, Truck, Home as HomeIcon, Clock, Layers, ShieldAlert
 } from 'lucide-react';
@@ -30,7 +30,8 @@ import SettingsManager from '../components/SettingsManager';
 import { SocketProvider, useSocket } from '../context/SocketContext';
 import { useWakeLock } from '../hooks/useWakeLock';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// 🟢 FIX 1: Vercel production deployment ke liye dynamic cross-origin fallback absolute URL bind kiya
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://school-erp-production.up.railway.app";
 
 function AppContent({ token, setToken, user, setUser }) {
   useWakeLock();
@@ -38,7 +39,7 @@ function AppContent({ token, setToken, user, setUser }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // Login States
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -60,11 +61,12 @@ function AppContent({ token, setToken, user, setUser }) {
     if (!authToken) return;
     setLoading(true);
     try {
+      // 🟢 FIX 2: Dynamic timestamp ke sath cache clearance bypass lagaya taake automatic sync data pull ho
       const response = await fetch(`${API_BASE_URL}/api/get-dashboard-metrics?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${authToken.trim()}`
         }
       });
       const data = await response.json();
@@ -74,7 +76,7 @@ function AppContent({ token, setToken, user, setUser }) {
         const absent = m.attendance_absent || 0;
         const total = present + absent;
         const pct = total > 0 ? `${Math.round((present / total) * 100)}%` : "92%";
-        
+
         setMetrics({
           total_students: m.total_students || 0,
           total_staff: m.total_staff || 0,
@@ -94,7 +96,6 @@ function AppContent({ token, setToken, user, setUser }) {
 
   useEffect(() => {
     if (!token) return;
-
     fetchDashboardMetrics(token);
   }, [token, fetchDashboardMetrics]);
 
@@ -127,14 +128,10 @@ function AppContent({ token, setToken, user, setUser }) {
     }
 
     // ── PATH A: AHK / WebViewToo Desktop Bridge ─────────────────────────────
-    // When running inside the AHK desktop wrapper, window.chrome.webview exists.
-    // We must NOT use fetch() — the bridge intercepts all API calls.
-    // We post a structured message and wait for AHK_Callback to resolve it.
     if (typeof window !== "undefined" && window.chrome?.webview) {
       try {
         const reqid = "login_" + Date.now();
         const result = await new Promise((resolve, reject) => {
-          // Temporarily install the global callback receiver
           const prev = window.AHK_Callback;
           const timer = setTimeout(() => {
             window.AHK_Callback = prev;
@@ -144,7 +141,6 @@ function AppContent({ token, setToken, user, setUser }) {
           window.AHK_Callback = (jsonStr) => {
             try {
               const res = JSON.parse(jsonStr);
-              // Only handle our specific reqid — pass others to any prev handler
               if (res.reqid === reqid) {
                 clearTimeout(timer);
                 window.AHK_Callback = prev;
@@ -178,11 +174,12 @@ function AppContent({ token, setToken, user, setUser }) {
         setLoginError(err.message || "Desktop bridge login failed.");
         console.error("[AHK Bridge] Login error:", err);
       }
-      return; // ← never fall through to fetch() in desktop mode
+      return;
     }
 
     // ── PATH B: Standard Web / Vercel fetch ─────────────────────────────────
     try {
+      // 🟢 FIX 3: Absolute API paths force mapping compile for browser security threads
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,7 +200,6 @@ function AppContent({ token, setToken, user, setUser }) {
     }
   };
 
-  // Handle Logout
   const handleLogout = () => {
     localStorage.removeItem('erp_token');
     localStorage.removeItem('erp_user');
@@ -212,7 +208,6 @@ function AppContent({ token, setToken, user, setUser }) {
     setActiveTab("dashboard");
   };
 
-  // Navigation Items
   const navItems = [
     { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
     { id: "students", name: "Students Directory", icon: GraduationCap },
@@ -233,7 +228,6 @@ function AppContent({ token, setToken, user, setUser }) {
     { id: "settings", name: "Settings panel", icon: Settings },
   ];
 
-  // If not logged in, render login panel
   if (!token) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 px-4">
@@ -255,8 +249,8 @@ function AppContent({ token, setToken, user, setUser }) {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-slate-300 text-sm mb-1.5 font-medium">Username</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 className="w-full bg-slate-950 text-white rounded-xl px-4 py-3 border border-slate-700 focus:outline-none focus:border-sky-500 transition-colors text-sm"
@@ -266,17 +260,17 @@ function AppContent({ token, setToken, user, setUser }) {
             </div>
             <div>
               <label className="block text-slate-300 text-sm mb-1.5 font-medium">Password</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="w-full bg-slate-950 text-white rounded-xl px-4 py-3 border border-slate-700 focus:outline-none focus:border-sky-500 transition-colors text-sm"
                 placeholder="Enter password"
               />
             </div>
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:shadow-sky-500/20 active:scale-95 transition-all duration-150 flex items-center justify-center touch-target text-sm"
             >
               Sign In
@@ -289,21 +283,17 @@ function AppContent({ token, setToken, user, setUser }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 relative overflow-hidden">
-      
-      {/* MOBILE BACKDROP DRAWER OVERLAY */}
       {isSidebarOpen && (
-        <div 
+        <div
           onClick={() => setIsSidebarOpen(false)}
           className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
         />
       )}
 
-      {/* SIDEBAR CONTAINER */}
       <aside className={`
         fixed inset-y-0 left-0 bg-slate-900 text-slate-100 z-50 flex flex-col w-72 transform lg:translate-x-0 lg:static transition-transform duration-300 ease-out border-r border-slate-800
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Sidebar Header */}
         <div className="h-16 px-6 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-sky-500 rounded-xl flex items-center justify-center text-white">
@@ -314,7 +304,7 @@ function AppContent({ token, setToken, user, setUser }) {
               <p className="text-[10px] text-sky-400 font-semibold tracking-wider uppercase">Karachi Campus</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(false)}
             className="lg:hidden text-slate-400 hover:text-white touch-target flex items-center justify-center"
           >
@@ -322,7 +312,6 @@ function AppContent({ token, setToken, user, setUser }) {
           </button>
         </div>
 
-        {/* Sidebar Navigation */}
         <nav className="flex-1 py-4 px-4 space-y-1 overflow-y-auto">
           {navItems.map(item => {
             const Icon = item.icon;
@@ -336,8 +325,8 @@ function AppContent({ token, setToken, user, setUser }) {
                 }}
                 className={`
                   w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all touch-target
-                  ${isActive 
-                    ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/10' 
+                  ${isActive
+                    ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/10'
                     : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}
                 `}
               >
@@ -348,7 +337,6 @@ function AppContent({ token, setToken, user, setUser }) {
           })}
         </nav>
 
-        {/* Sidebar Footer */}
         <div className="p-4 border-t border-slate-800 flex flex-col gap-2 shrink-0">
           <div className="px-4 py-2 bg-slate-950/40 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-sky-400 text-xs uppercase">
@@ -369,13 +357,10 @@ function AppContent({ token, setToken, user, setUser }) {
         </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden no-h-scroll">
-        
-        {/* MOBILE HEADER */}
         <header className="h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between sticky top-0 z-30 lg:px-8 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden text-slate-600 hover:text-slate-900 touch-target flex items-center justify-center"
             >
@@ -388,7 +373,7 @@ function AppContent({ token, setToken, user, setUser }) {
 
           <div className="flex items-center gap-3">
             {activeTab === "dashboard" && (
-              <button 
+              <button
                 onClick={() => fetchDashboardMetrics(token)}
                 disabled={loading}
                 className="text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full p-2 touch-target flex items-center justify-center disabled:opacity-50 transition-colors"
@@ -403,80 +388,28 @@ function AppContent({ token, setToken, user, setUser }) {
           </div>
         </header>
 
-        {/* PAGE BODY */}
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto max-w-7xl w-full mx-auto">
-          
           {activeTab === "dashboard" && (
             <Dashboard metrics={metrics} loading={loading} onRefresh={() => fetchDashboardMetrics(token)} />
           )}
-
-          {activeTab === "students" && (
-            <StudentManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "class-summaries" && (
-            <ClassSectionManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "attendance" && (
-            <AttendanceManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "staff" && (
-            <StaffManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "payroll" && (
-            <PayrollManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "fees" && (
-            <FeeManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "accounts" && (
-            <LedgerManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "exams" && (
-            <ExamManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "results" && (
-            <ResultManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "library" && (
-            <LibraryManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "transport" && (
-            <TransportManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "hostel" && (
-            <HostelManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "timetable" && (
-            <TimetableManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "inventory" && (
-            <InventoryManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "audit-logs" && (
-            <AuditLogsManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
-          {activeTab === "settings" && (
-            <SettingsManager apiBaseUrl={API_BASE_URL} token={token} />
-          )}
-
+          {activeTab === "students" && <StudentManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "class-summaries" && <ClassSectionManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "attendance" && <AttendanceManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "staff" && <StaffManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "payroll" && <PayrollManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "fees" && <FeeManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "accounts" && <LedgerManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "exams" && <ExamManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "results" && <ResultManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "library" && <LibraryManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "transport" && <TransportManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "hostel" && <HostelManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "timetable" && <TimetableManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "inventory" && <InventoryManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "audit-logs" && <AuditLogsManager apiBaseUrl={API_BASE_URL} token={token} />}
+          {activeTab === "settings" && <SettingsManager apiBaseUrl={API_BASE_URL} token={token} />}
         </main>
       </div>
-
     </div>
   );
 }
@@ -500,11 +433,11 @@ export default function Home() {
 
   return (
     <SocketProvider token={token} apiBaseUrl={API_BASE_URL}>
-      <AppContent 
-        token={token} 
-        setToken={setToken} 
-        user={user} 
-        setUser={setUser} 
+      <AppContent
+        token={token}
+        setToken={setToken}
+        user={user}
+        setUser={setUser}
       />
     </SocketProvider>
   );
