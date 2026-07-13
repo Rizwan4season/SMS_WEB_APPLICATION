@@ -13,8 +13,7 @@ function LibraryManager({ apiBaseUrl, token }) {
   const [formData, setFormData] = useState({
     title: "",
     author: "",
-    isbn: "",
-    quantity: 1,
+    qty: 1,
     rack_no: ""
   });
   const [formError, setFormError] = useState("");
@@ -64,7 +63,12 @@ function LibraryManager({ apiBaseUrl, token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          title: formData.title,
+          author: formData.author,
+          qty: parseFloat(formData.qty) || 1,
+          rack_no: formData.rack_no
+        })
       });
       const data = await response.json();
       if (data.status === "success") {
@@ -134,7 +138,7 @@ function LibraryManager({ apiBaseUrl, token }) {
         </div>
         <button
           onClick={() => {
-            setFormData({ title: "", author: "", isbn: "", quantity: 1, rack_no: "" });
+            setFormData({ title: "", author: "", qty: 1, rack_no: "" });
             setFormError("");
             setIsModalOpen(true);
           }}
@@ -169,11 +173,11 @@ function LibraryManager({ apiBaseUrl, token }) {
                   <div key={b.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                     <div>
                       <h4 className="font-bold text-slate-800 font-heading text-base leading-tight">{b.title}</h4>
-                      <p className="text-xs text-slate-400 mt-1">Author: {b.author} · ISBN: {b.isbn || '-'}</p>
+                      <p className="text-xs text-slate-400 mt-1">Author: {b.author}</p>
                     </div>
 
                     <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
-                      <span className="text-slate-500 font-semibold">Qty: {b.quantity} · Rack: {b.rack_no || '-'}</span>
+                      <span className="text-slate-500 font-semibold">Qty: {b.qty} · Rack: {b.rack_no || '-'}</span>
                       <button
                         onClick={() => handleDelete(b.id)}
                         className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors touch-target"
@@ -193,7 +197,6 @@ function LibraryManager({ apiBaseUrl, token }) {
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       <th className="py-4 px-6">Book Title</th>
                       <th className="py-4 px-6">Author</th>
-                      <th className="py-4 px-6">ISBN</th>
                       <th className="py-4 px-6">Qty Stock</th>
                       <th className="py-4 px-6">Rack Location</th>
                       <th className="py-4 px-6 text-right">Actions</th>
@@ -204,8 +207,7 @@ function LibraryManager({ apiBaseUrl, token }) {
                       <tr key={b.id} className="hover:bg-slate-50/50">
                         <td className="py-4 px-6 font-semibold text-slate-900">{b.title}</td>
                         <td className="py-4 px-6 text-slate-600">{b.author}</td>
-                        <td className="py-4 px-6 text-slate-500">{b.isbn || '-'}</td>
-                        <td className="py-4 px-6 text-slate-600 font-bold">{b.quantity}</td>
+                        <td className="py-4 px-6 text-slate-600 font-bold">{b.qty}</td>
                         <td className="py-4 px-6 text-slate-600">{b.rack_no || '-'}</td>
                         <td className="py-4 px-6 text-right">
                           <button
@@ -271,37 +273,28 @@ function LibraryManager({ apiBaseUrl, token }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">ISBN Number</label>
-                    <input
-                      type="text"
-                      value={formData.isbn}
-                      onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                      placeholder="e.g. 978-3-16-148410-0"
-                      className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                    />
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Quantity Stock *</label>
+                        <input
+                          type="number"
+                          required
+                          value={formData.qty}
+                          onChange={(e) => setFormData({ ...formData, qty: e.target.value })}
+                          className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
+                        />
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Quantity Stock *</label>
-                      <input
-                        type="number"
-                        required
-                        value={formData.quantity}
-                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Rack Location</label>
-                      <input
-                        type="text"
-                        value={formData.rack_no}
-                        onChange={(e) => setFormData({ ...formData, rack_no: e.target.value })}
-                        placeholder="e.g. A-4"
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Rack Location</label>
+                        <input
+                          type="text"
+                          value={formData.rack_no}
+                          onChange={(e) => setFormData({ ...formData, rack_no: e.target.value })}
+                          placeholder="e.g. A-4"
+                          className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

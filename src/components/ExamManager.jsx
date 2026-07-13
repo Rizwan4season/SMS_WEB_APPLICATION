@@ -11,15 +11,12 @@ function ExamManager({ apiBaseUrl, token }) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    title: "",
+    exam_name: "",
+    term: "Mid Term",
     exam_date: new Date().toISOString().split('T')[0],
-    class: "Class 8",
-    subject: "",
-    total_marks: 100
+    status: "Active"
   });
   const [formError, setFormError] = useState("");
-
-  const classes = ["Playgroup", "Nursery", "Prep", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
 
   const fetchExams = async () => {
     setLoading(true);
@@ -54,7 +51,7 @@ function ExamManager({ apiBaseUrl, token }) {
     e.preventDefault();
     setFormError("");
 
-    if (!formData.title || !formData.subject) {
+    if (!formData.exam_name || !formData.term) {
       setFormError("Please fill all required fields.");
       return;
     }
@@ -66,7 +63,12 @@ function ExamManager({ apiBaseUrl, token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          exam_name: formData.exam_name,
+          term: formData.term,
+          exam_date: formData.exam_date,
+          status: formData.status
+        })
       });
       const data = await response.json();
       if (data.status === "success") {
@@ -137,11 +139,10 @@ function ExamManager({ apiBaseUrl, token }) {
         <button
           onClick={() => {
             setFormData({
-              title: "",
+              exam_name: "",
+              term: "Mid Term",
               exam_date: new Date().toISOString().split('T')[0],
-              class: "Class 8",
-              subject: "",
-              total_marks: 100
+              status: "Active"
             });
             setFormError("");
             setIsModalOpen(true);
@@ -177,14 +178,16 @@ function ExamManager({ apiBaseUrl, token }) {
                   <div key={ex.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-bold">{ex.exam_date_fmt}</span>
-                        <h4 className="font-bold text-slate-800 font-heading text-base leading-tight mt-1">{ex.title}</h4>
-                        <p className="text-xs text-sky-500 font-semibold mt-1">Class: {ex.class} · Subject: {ex.subject}</p>
+                        <h4 className="font-bold text-slate-800 font-heading text-base leading-tight">{ex.exam_name}</h4>
+                        <p className="text-xs text-slate-500 mt-1">Term: {ex.term}</p>
                       </div>
+                      <span className="bg-sky-50 text-sky-700 text-xs font-bold px-3 py-1 rounded-xl">
+                        {ex.status}
+                      </span>
                     </div>
 
                     <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
-                      <span className="text-slate-500 font-semibold">Total Marks: {ex.total_marks}</span>
+                      <span className="text-slate-400">Date: {ex.exam_date_fmt}</span>
                       <button
                         onClick={() => handleDelete(ex.id)}
                         className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors touch-target"
@@ -202,22 +205,20 @@ function ExamManager({ apiBaseUrl, token }) {
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="py-4 px-6">Exam Name</th>
+                      <th className="py-4 px-6">Exam Term</th>
                       <th className="py-4 px-6">Scheduled Date</th>
-                      <th className="py-4 px-6">Exam Title</th>
-                      <th className="py-4 px-6">Target Class</th>
-                      <th className="py-4 px-6">Subject</th>
-                      <th className="py-4 px-6">Total Marks</th>
+                      <th className="py-4 px-6 font-bold">Status</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {exams.map((ex) => (
                       <tr key={ex.id} className="hover:bg-slate-50/50">
-                        <td className="py-4 px-6 text-slate-600">{ex.exam_date_fmt}</td>
-                        <td className="py-4 px-6 font-semibold text-slate-900">{ex.title}</td>
-                        <td className="py-4 px-6 text-slate-700 font-medium">{ex.class}</td>
-                        <td className="py-4 px-6 text-sky-600 font-semibold">{ex.subject}</td>
-                        <td className="py-4 px-6 text-slate-600">{ex.total_marks} marks</td>
+                        <td className="py-4 px-6 font-semibold text-slate-900">{ex.exam_name}</td>
+                        <td className="py-4 px-6 text-slate-600">{ex.term}</td>
+                        <td className="py-4 px-6 text-slate-500">{ex.exam_date_fmt}</td>
+                        <td className="py-4 px-6 text-slate-800 font-medium">{ex.status}</td>
                         <td className="py-4 px-6 text-right">
                           <button
                             onClick={() => handleDelete(ex.id)}
@@ -258,64 +259,55 @@ function ExamManager({ apiBaseUrl, token }) {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Exam Term Title *</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Exam Name *</label>
                     <input
                       type="text"
                       required
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="e.g. Mid-Term Examination 2026"
+                      value={formData.exam_name}
+                      onChange={(e) => setFormData({ ...formData, exam_name: e.target.value })}
+                      placeholder="e.g. Final Examination 2026"
                       className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Target Class *</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Exam Term *</label>
                       <select
-                        value={formData.class}
-                        onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                        value={formData.term}
+                        onChange={(e) => setFormData({ ...formData, term: e.target.value })}
                         className="w-full bg-slate-50 rounded-xl px-3 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500"
                       >
-                        {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                        <option value="First Term">First Term</option>
+                        <option value="Mid Term">Mid Term</option>
+                        <option value="Final Term">Final Term</option>
+                        <option value="Monthly Test">Monthly Test</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Subject Course Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.subject}
-                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                        placeholder="e.g. Mathematics"
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                      />
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Status *</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full bg-slate-50 rounded-xl px-3 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Exam Date</label>
-                      <input
-                        type="date"
-                        value={formData.exam_date}
-                        onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Total Marks *</label>
-                      <input
-                        type="number"
-                        required
-                        value={formData.total_marks}
-                        onChange={(e) => setFormData({ ...formData, total_marks: e.target.value })}
-                        placeholder="e.g. 100"
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Exam Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.exam_date}
+                      onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
+                      className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
+                    />
                   </div>
                 </div>
               </div>

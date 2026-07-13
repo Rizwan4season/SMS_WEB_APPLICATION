@@ -15,11 +15,8 @@ function InventoryManager({ apiBaseUrl, token }) {
   // Forms States
   const [formData, setFormData] = useState({
     item_name: "",
-    size: "Standard",
-    qty: "",
-    unit_price: "",
-    value: "",
-    category: "Uniforms"
+    quantity: "",
+    unit_price: ""
   });
   
   const [saleData, setSaleData] = useState({
@@ -64,27 +61,19 @@ function InventoryManager({ apiBaseUrl, token }) {
     e.preventDefault();
     setFormError("");
 
-    if (!formData.item_name || parseFloat(formData.qty) <= 0 || parseFloat(formData.unit_price) <= 0) {
+    if (!formData.item_name || parseFloat(formData.quantity) <= 0 || parseFloat(formData.unit_price) <= 0) {
       setFormError("Please enter valid quantities and pricing.");
       return;
     }
 
     try {
-      const payload = {
-        item_name: formData.item_name,
-        size: formData.size,
-        qty: parseFloat(formData.qty) || 0,
-        unit_price: parseFloat(formData.unit_price) || 0,
-        value: parseFloat(formData.value) || (parseFloat(formData.qty) * parseFloat(formData.unit_price)) || 0,
-        category: formData.category
-      };
       const response = await fetch(`${apiBaseUrl}/api/inventory/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(formData)
       });
       const data = await response.json();
       if (data.status === "success") {
@@ -109,25 +98,19 @@ function InventoryManager({ apiBaseUrl, token }) {
     }
 
     const selected = stock.find(item => String(item.id) === String(saleData.item_id));
-    if (selected && parseFloat(saleData.quantity) > parseFloat(selected.qty || 0)) {
-      setFormError(`Insufficient stock! Only ${selected.qty} units available.`);
+    if (selected && parseFloat(saleData.quantity) > parseFloat(selected.quantity)) {
+      setFormError(`Insufficient stock! Only ${selected.quantity} units available.`);
       return;
     }
 
     try {
-      const payload = {
-        items: [{
-          id: saleData.item_id,
-          sell_qty: parseFloat(saleData.quantity)
-        }]
-      };
       const response = await fetch(`${apiBaseUrl}/api/inventory/sale`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(saleData)
       });
       const data = await response.json();
       if (data.status === "success") {
@@ -167,6 +150,7 @@ function InventoryManager({ apiBaseUrl, token }) {
     }
   };
 
+  
   // Real-time synchronization listener
   const fetchStockRef = useRef(fetchStock);
   useEffect(() => {
@@ -211,7 +195,7 @@ function InventoryManager({ apiBaseUrl, token }) {
           
           <button
             onClick={() => {
-              setFormData({ item_name: "", size: "Standard", qty: "", unit_price: "", value: "", category: "Uniforms" });
+              setFormData({ item_name: "", quantity: "", unit_price: "" });
               setFormError("");
               setModalType("add");
               setIsModalOpen(true);
@@ -249,11 +233,10 @@ function InventoryManager({ apiBaseUrl, token }) {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-bold text-slate-800 font-heading text-base leading-tight">{item.item_name}</h4>
-                        <p className="text-[10px] text-slate-400 mt-1">Size: {item.size} · Category: {item.category}</p>
                         <span className={`text-[9px] font-bold px-2 py-0.5 mt-1 rounded-full uppercase tracking-wider ${
-                          parseFloat(item.qty || 0) <= 5 ? "bg-red-50 text-red-700" : "bg-sky-50 text-sky-700"
+                          parseFloat(item.quantity) <= 5 ? "bg-red-50 text-red-700" : "bg-sky-50 text-sky-700"
                         }`}>
-                          {parseFloat(item.qty || 0) <= 5 ? 'Low Stock' : 'In Stock'}
+                          {parseFloat(item.quantity) <= 5 ? 'Low Stock' : 'In Stock'}
                         </span>
                       </div>
                       <span className="bg-sky-50 text-sky-700 text-xs font-bold px-3 py-1 rounded-xl">
@@ -262,7 +245,7 @@ function InventoryManager({ apiBaseUrl, token }) {
                     </div>
 
                     <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
-                      <span className="text-slate-500 font-semibold">Available Quantity: {item.qty} units</span>
+                      <span className="text-slate-500 font-semibold">Available Quantity: {item.quantity} units</span>
                       <button
                         onClick={() => handleDelete(item.id)}
                         className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors touch-target"
@@ -281,11 +264,8 @@ function InventoryManager({ apiBaseUrl, token }) {
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       <th className="py-4 px-6">Item Description</th>
-                      <th className="py-4 px-6">Size / Variant</th>
-                      <th className="py-4 px-6">Category</th>
                       <th className="py-4 px-6">Available Stock Qty</th>
                       <th className="py-4 px-6">Unit Price</th>
-                      <th className="py-4 px-6">Total Value</th>
                       <th className="py-4 px-6">Status Indicator</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
@@ -294,16 +274,13 @@ function InventoryManager({ apiBaseUrl, token }) {
                     {stock.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/50">
                         <td className="py-4 px-6 font-semibold text-slate-900">{item.item_name}</td>
-                        <td className="py-4 px-6 text-slate-600">{item.size}</td>
-                        <td className="py-4 px-6 text-slate-600">{item.category}</td>
-                        <td className="py-4 px-6 text-slate-600 font-bold">{item.qty} units</td>
+                        <td className="py-4 px-6 text-slate-600 font-bold">{item.quantity} units</td>
                         <td className="py-4 px-6 text-slate-800 font-semibold">₨ {parseFloat(item.unit_price).toLocaleString()}</td>
-                        <td className="py-4 px-6 text-slate-800 font-semibold">₨ {parseFloat(item.value || 0).toLocaleString()}</td>
                         <td className="py-4 px-6">
                           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                            parseFloat(item.qty || 0) <= 5 ? "bg-red-50 text-red-700 font-bold" : "bg-green-50 text-green-700"
+                            parseFloat(item.quantity) <= 5 ? "bg-red-50 text-red-700 font-bold" : "bg-green-50 text-green-700"
                           }`}>
-                            {parseFloat(item.qty || 0) <= 5 ? 'Restock Alert' : 'Active'}
+                            {parseFloat(item.quantity) <= 5 ? 'Restock Alert' : 'Active'}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right">
@@ -348,81 +325,39 @@ function InventoryManager({ apiBaseUrl, token }) {
                   )}
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Item Name / Description *</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.item_name}
-                          onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                          placeholder="e.g. School Uniform Shirt"
-                          className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Item Name / Description *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.item_name}
+                        onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                        placeholder="e.g. Medium Sized School Uniform"
+                        className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Size / Variant</label>
-                        <input
-                          type="text"
-                          value={formData.size}
-                          onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                          placeholder="e.g. Medium, Standard"
-                          className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Category</label>
-                        <select
-                          value={formData.category}
-                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          className="w-full bg-slate-50 rounded-xl px-3 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500"
-                        >
-                          <option value="Uniforms">Uniforms</option>
-                          <option value="Books">Books</option>
-                          <option value="Stationery">Stationery</option>
-                          <option value="Equipment">Equipment</option>
-                          <option value="Assets">Assets</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Opening Qty *</label>
                         <input
                           type="number"
                           required
-                          value={formData.qty}
-                          onChange={(e) => setFormData({ ...formData, qty: e.target.value })}
-                          placeholder="50"
+                          value={formData.quantity}
+                          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                          placeholder="e.g. 50"
                           className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Unit Price *</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Unit Price (₨) *</label>
                         <input
                           type="number"
                           required
                           value={formData.unit_price}
                           onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
-                          placeholder="1200"
-                          className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Total Value</label>
-                        <input
-                          type="number"
-                          value={formData.value}
-                          onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                          placeholder="Auto-calculated"
+                          placeholder="e.g. 1200"
                           className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                         />
                       </div>
@@ -465,7 +400,7 @@ function InventoryManager({ apiBaseUrl, token }) {
                       >
                         <option value="">-- Choose Stock Item --</option>
                         {stock.map(item => (
-                          <option key={item.id} value={item.id}>{item.item_name} (Stock: {item.qty})</option>
+                          <option key={item.id} value={item.id}>{item.item_name} (Stock: {item.quantity})</option>
                         ))}
                       </select>
                     </div>

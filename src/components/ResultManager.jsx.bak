@@ -8,8 +8,6 @@ function ResultManager({ apiBaseUrl, token }) {
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState("");
   const [section, setSection] = useState("A");
-  const [studentClass, setStudentClass] = useState("Class 8");
-  const [subject, setSubject] = useState("");
 
   const [roster, setRoster] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -17,7 +15,6 @@ function ResultManager({ apiBaseUrl, token }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const classes = ["Playgroup", "Nursery", "Prep", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const sections = ["A", "B", "C"];
 
   // Fetch Exams list
@@ -43,8 +40,8 @@ function ResultManager({ apiBaseUrl, token }) {
   }, []);
 
   const handleLoadSheet = async () => {
-    if (!selectedExamId || !studentClass || !subject) {
-      setError("Please select exam, class, and enter a subject.");
+    if (!selectedExamId) {
+      setError("Please select an exam first.");
       return;
     }
     setLoading(true);
@@ -57,7 +54,7 @@ function ResultManager({ apiBaseUrl, token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ exam_id: selectedExamId, class: studentClass, section, subject })
+        body: JSON.stringify({ exam_id: selectedExamId, section })
       });
       const data = await response.json();
       if (data.status === "success" && Array.isArray(data.data)) {
@@ -95,45 +92,14 @@ function ResultManager({ apiBaseUrl, token }) {
     }));
   };
 
-  const handleTotalMarksChange = (studentId, totalMarks) => {
-    setRoster(prev => prev.map(st => {
-      if (String(st.student_id) === String(studentId)) {
-        const total = parseFloat(totalMarks) || 100;
-        const marks = parseFloat(st.obtained_marks) || 0;
-        const pct = (marks / total) * 100;
-        
-        let grade = "F";
-        let isPass = 0;
-        if (pct >= 80) { grade = "A+"; isPass = 1; }
-        else if (pct >= 70) { grade = "A"; isPass = 1; }
-        else if (pct >= 60) { grade = "B"; isPass = 1; }
-        else if (pct >= 50) { grade = "C"; isPass = 1; }
-        else if (pct >= 40) { grade = "D"; isPass = 1; }
-
-        return { ...st, total_marks: totalMarks, grade, is_pass: isPass };
-      }
-      return st;
-    }));
-  };
-
-  const handleRemarksChange = (studentId, remarks) => {
-    setRoster(prev => prev.map(st => {
-      if (String(st.student_id) === String(studentId)) {
-        return { ...st, remarks };
-      }
-      return st;
-    }));
-  };
-
   const handleSaveResults = async () => {
     setSaving(true);
     setError("");
     const records = roster.map(st => ({
       student_id: st.student_id,
       obtained_marks: parseFloat(st.obtained_marks) || 0,
-      total_marks: parseFloat(st.total_marks) || 100,
       grade: st.grade || "F",
-      remarks: st.remarks || ""
+      is_pass: st.is_pass || 0
     }));
 
     try {
@@ -143,7 +109,7 @@ function ResultManager({ apiBaseUrl, token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ exam_id: selectedExamId, subject, records })
+        body: JSON.stringify({ exam_id: selectedExamId, records })
       });
       const data = await response.json();
       if (data.status === "success") {
@@ -187,7 +153,7 @@ function ResultManager({ apiBaseUrl, token }) {
       
       {/* Config Panel */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Scheduled Exam Term</label>
             <select
@@ -197,19 +163,8 @@ function ResultManager({ apiBaseUrl, token }) {
             >
               <option value="">-- Choose Exam Term --</option>
               {exams.map(ex => (
-                <option key={ex.id} value={ex.id}>{ex.exam_name} ({ex.term})</option>
+                <option key={ex.id} value={ex.id}>{ex.title} - {ex.class} ({ex.subject})</option>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Class *</label>
-            <select
-              value={studentClass}
-              onChange={(e) => setStudentClass(e.target.value)}
-              className="w-full bg-slate-50 rounded-xl px-3.5 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500"
-            >
-              {classes.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
@@ -222,18 +177,6 @@ function ResultManager({ apiBaseUrl, token }) {
             >
               {sections.map(s => <option key={s} value={s}>Section {s}</option>)}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Subject *</label>
-            <input
-              type="text"
-              required
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="e.g. Mathematics"
-              className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
-            />
           </div>
 
           <button
@@ -261,7 +204,7 @@ function ResultManager({ apiBaseUrl, token }) {
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <span className="text-xs text-slate-500">
-              Exam: <strong>{selectedExam?.exam_name} ({selectedExam?.term})</strong> · Subject: <strong>{subject}</strong>
+              Exam: <strong>{selectedExam?.title}</strong> · Subject: <strong>{selectedExam?.subject}</strong> (Out of {selectedExam?.total_marks || 100})
             </span>
             
             <button
@@ -284,11 +227,9 @@ function ResultManager({ apiBaseUrl, token }) {
                     <th className="py-4 px-6 w-24">Roll No</th>
                     <th className="py-4 px-6">Student Name</th>
                     <th className="py-4 px-6">Father Name</th>
-                    <th className="py-4 px-6 text-center w-32">Total Marks</th>
-                    <th className="py-4 px-6 text-center w-32">Obtained Marks</th>
+                    <th className="py-4 px-6 text-center w-48">Obtained Marks</th>
                     <th className="py-4 px-6 text-center w-24">Grade</th>
                     <th className="py-4 px-6 text-center w-24">Status</th>
-                    <th className="py-4 px-6 text-center">Remarks</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
@@ -297,15 +238,6 @@ function ResultManager({ apiBaseUrl, token }) {
                       <td className="py-4 px-6 font-semibold text-slate-900">{st.roll_no || '-'}</td>
                       <td className="py-4 px-6 font-semibold text-slate-800">{st.name}</td>
                       <td className="py-4 px-6 text-slate-500">{st.father_name}</td>
-                      <td className="py-4 px-6 text-center">
-                        <input
-                          type="number"
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-center text-sm font-semibold w-24 focus:outline-none focus:border-sky-500 focus:bg-white"
-                          value={st.total_marks !== null ? st.total_marks : 100}
-                          onChange={(e) => handleTotalMarksChange(st.student_id, e.target.value)}
-                          placeholder="100"
-                        />
-                      </td>
                       <td className="py-4 px-6 text-center">
                         <input
                           type="number"
@@ -322,15 +254,6 @@ function ResultManager({ apiBaseUrl, token }) {
                         }`}>
                           {st.is_pass ? 'Pass' : 'Fail'}
                         </span>
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <input
-                          type="text"
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-full max-w-[200px] focus:outline-none focus:border-sky-500 focus:bg-white"
-                          value={st.remarks || ""}
-                          onChange={(e) => handleRemarksChange(st.student_id, e.target.value)}
-                          placeholder="Remarks"
-                        />
                       </td>
                     </tr>
                   ))}
@@ -357,40 +280,17 @@ function ResultManager({ apiBaseUrl, token }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] text-slate-400 font-semibold uppercase">Obtained Marks</label>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-center text-sm font-semibold mt-1 focus:outline-none focus:border-sky-500 focus:bg-white"
-                        value={st.obtained_marks !== null ? st.obtained_marks : ""}
-                        onChange={(e) => handleMarksChange(st.student_id, e.target.value)}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-400 font-semibold uppercase">Total Marks</label>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-center text-sm font-semibold mt-1 focus:outline-none focus:border-sky-500 focus:bg-white"
-                        value={st.total_marks !== null ? st.total_marks : 100}
-                        onChange={(e) => handleTotalMarksChange(st.student_id, e.target.value)}
-                        placeholder="100"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-slate-400 font-semibold uppercase">Remarks</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Marks:</label>
                     <input
-                      type="text"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:border-sky-500 focus:bg-white"
-                      value={st.remarks || ""}
-                      onChange={(e) => handleRemarksChange(st.student_id, e.target.value)}
-                      placeholder="Excellent performance"
+                      type="tel"
+                      inputMode="numeric"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center text-sm font-semibold w-28 focus:outline-none focus:border-sky-500 focus:bg-white touch-target"
+                      value={st.obtained_marks !== null ? st.obtained_marks : ""}
+                      onChange={(e) => handleMarksChange(st.student_id, e.target.value)}
+                      placeholder="0"
                     />
+                    <span className="text-xs text-slate-400">/ {selectedExam?.total_marks || 100}</span>
                   </div>
                 </div>
               ))}

@@ -11,11 +11,11 @@ function TransportManager({ apiBaseUrl, token }) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    route_name: "",
-    bus_no: "",
+    route_title: "",
+    vehicle_no: "",
     driver_name: "",
     driver_phone: "",
-    fare: ""
+    fee: ""
   });
   const [formError, setFormError] = useState("");
 
@@ -52,7 +52,7 @@ function TransportManager({ apiBaseUrl, token }) {
     e.preventDefault();
     setFormError("");
 
-    if (!formData.route_name || !formData.fare) {
+    if (!formData.route_title || !formData.fee) {
       setFormError("Please fill required fields.");
       return;
     }
@@ -134,7 +134,7 @@ function TransportManager({ apiBaseUrl, token }) {
         </div>
         <button
           onClick={() => {
-            setFormData({ route_name: "", bus_no: "", driver_name: "", driver_phone: "", fare: "" });
+            setFormData({ route_title: "", vehicle_no: "", driver_name: "", driver_phone: "", fee: "" });
             setFormError("");
             setIsModalOpen(true);
           }}
@@ -169,11 +169,11 @@ function TransportManager({ apiBaseUrl, token }) {
                   <div key={r.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-bold text-slate-800 font-heading text-base leading-tight">{r.route_name}</h4>
-                        <p className="text-xs text-slate-500 mt-1">Bus Number: {r.bus_no || '-'}</p>
+                        <h4 className="font-bold text-slate-800 font-heading text-base leading-tight">{r.route_title}</h4>
+                        <p className="text-xs text-slate-500 mt-1">Bus Number: {r.vehicle_no || '-'}</p>
                       </div>
                       <span className="bg-sky-50 text-sky-700 text-xs font-bold px-3 py-1 rounded-xl">
-                        ₨ {parseFloat(r.fare).toLocaleString()}
+                        ₨ {parseFloat(r.fee || 0).toLocaleString()}
                       </span>
                     </div>
 
@@ -210,11 +210,11 @@ function TransportManager({ apiBaseUrl, token }) {
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {routes.map((r) => (
                       <tr key={r.id} className="hover:bg-slate-50/50">
-                        <td className="py-4 px-6 font-semibold text-slate-900">{r.route_name}</td>
-                        <td className="py-4 px-6 text-slate-600">{r.bus_no || '-'}</td>
+                        <td className="py-4 px-6 font-semibold text-slate-900">{r.route_title}</td>
+                        <td className="py-4 px-6 text-slate-600">{r.vehicle_no || '-'}</td>
                         <td className="py-4 px-6 text-slate-700">{r.driver_name || '-'}</td>
                         <td className="py-4 px-6 text-slate-500">{r.driver_phone || '-'}</td>
-                        <td className="py-4 px-6 text-sky-600 font-bold">₨ {parseFloat(r.fare).toLocaleString()}</td>
+                        <td className="py-4 px-6 text-sky-600 font-bold">₨ {parseFloat(r.fee || 0).toLocaleString()}</td>
                         <td className="py-4 px-6 text-right">
                           <button
                             onClick={() => handleDelete(r.id)}
@@ -255,12 +255,12 @@ function TransportManager({ apiBaseUrl, token }) {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Route Name *</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Route Location Title *</label>
                     <input
                       type="text"
                       required
-                      value={formData.route_name}
-                      onChange={(e) => setFormData({ ...formData, route_name: e.target.value })}
+                      value={formData.route_title}
+                      onChange={(e) => setFormData({ ...formData, route_title: e.target.value })}
                       placeholder="e.g. North Karachi to Campus"
                       className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                     />
@@ -268,23 +268,23 @@ function TransportManager({ apiBaseUrl, token }) {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Bus / Vehicle No</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Vehicle / Bus No</label>
                       <input
                         type="text"
-                        value={formData.bus_no}
-                        onChange={(e) => setFormData({ ...formData, bus_no: e.target.value })}
+                        value={formData.vehicle_no}
+                        onChange={(e) => setFormData({ ...formData, vehicle_no: e.target.value })}
                         placeholder="e.g. BSA-9821"
                         className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Monthly Fare (₨) *</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 font-bold">Monthly Fee (₨) *</label>
                       <input
                         type="number"
                         required
-                        value={formData.fare}
-                        onChange={(e) => setFormData({ ...formData, fare: e.target.value })}
+                        value={formData.fee}
+                        onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
                         placeholder="e.g. 1500"
                         className="w-full bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 text-sm focus:outline-none focus:border-sky-500 focus:bg-white"
                       />
