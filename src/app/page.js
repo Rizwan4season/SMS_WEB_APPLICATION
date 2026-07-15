@@ -118,6 +118,35 @@ function AppContent({ token, setToken, user, setUser }) {
     };
   }, [socket, token, fetchDashboardMetrics]);
 
+  // Global Interceptor to automatically logout on 401/403 Invalid or Expired Token
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 401 || response.status === 403) {
+        try {
+          const clone = response.clone();
+          const body = await clone.json();
+          if (body && (body.message?.toLowerCase().includes("token") || body.message?.toLowerCase().includes("expire"))) {
+            console.warn("Auth token invalid or expired. Auto-logging out...");
+            localStorage.removeItem('erp_token');
+            localStorage.removeItem('erp_user');
+            setToken(null);
+            setUser(null);
+            setActiveTab("dashboard");
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+      return response;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [setToken, setUser]);
+
   // Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
